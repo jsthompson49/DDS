@@ -16,6 +16,7 @@ public class HatchTargetPipeline implements VisionPipeline {
 
     private double offset;
 
+    private int hits = 0;
     private long count = 0;
     private long duration = 0;
 
@@ -30,14 +31,15 @@ public class HatchTargetPipeline implements VisionPipeline {
     @Override
     public void process(Mat image) {
         long start = System.currentTimeMillis();
-        List<HatchTargetRecognizer.HatchTarget> hatchTargets = targetRecognizer.find(image,
-                (rr,idx) -> {});
+        List<HatchTarget> hatchTargets = targetRecognizer.find(image, (rr,idx) -> {});
 
         double targetOffset = -9999.1111;
+        int hit = 0;
         if (hatchTargets != null) {
             // Get the closest one
-            HatchTargetRecognizer.HatchTarget hatchTarget = hatchTargets.stream().min(new HatchTargetComparator()).get();
+            HatchTarget hatchTarget = hatchTargets.stream().min(new HatchTargetComparator()).get();
             targetOffset = hatchTarget.getOffset(width);
+            hit = 1;
         }
 
         long end = System.currentTimeMillis();
@@ -45,16 +47,17 @@ public class HatchTargetPipeline implements VisionPipeline {
             offset = targetOffset;
             count++;
             duration += (end - start);
+            hits += hit;
         }
     }
 
     public synchronized void setTargetData() {
-        networkTableTargetData.update(offset, count, duration);
+        networkTableTargetData.update(offset, hits, count, duration);
     }
 
-    private class HatchTargetComparator implements Comparator<HatchTargetRecognizer.HatchTarget> {
+    private class HatchTargetComparator implements Comparator<HatchTarget> {
         @Override
-        public int compare(HatchTargetRecognizer.HatchTarget o1, HatchTargetRecognizer.HatchTarget o2) {
+        public int compare(HatchTarget o1, HatchTarget o2) {
             double offset1 = o1.getOffset(width);
             double offset2 = o2.getOffset(width);
 
