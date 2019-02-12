@@ -21,6 +21,7 @@ public class HatchTargetPipeline implements VisionPipeline {
     private long duration = 0;
 
     public static void startVisionThread(VideoSource videoSource) {
+        System.out.println("Starting vision thread");
         new VisionThread(videoSource, new HatchTargetPipeline(videoSource.getVideoMode().width), pipeline -> pipeline.setTargetData()).start();
     }
 
@@ -34,14 +35,21 @@ public class HatchTargetPipeline implements VisionPipeline {
         List<HatchTarget> hatchTargets = targetRecognizer.find(image, (rr,idx) -> {});
 
         double targetOffset = -9999.1111;
+        int hitCount = (hatchTargets == null) ? 0 : hatchTargets.size();
         int hit = 0;
-        if (hatchTargets != null) {
+        HatchTarget hatchTarget = null;
+        if (hitCount == 1) {
+            hatchTarget = hatchTargets.get(0);
+        } else if (hitCount > 1) {
+            hatchTarget = hatchTargets.stream().min(new HatchTargetComparator()).get();
+        }
+        if (hatchTarget != null) {
             // Get the closest one
-            HatchTarget hatchTarget = hatchTargets.stream().min(new HatchTargetComparator()).get();
             targetOffset = hatchTarget.getOffset(width);
             hit = 1;
         }
 
+        System.out.println("Processing image: hits=" + hitCount);
         long end = System.currentTimeMillis();
         synchronized (this) {
             offset = targetOffset;

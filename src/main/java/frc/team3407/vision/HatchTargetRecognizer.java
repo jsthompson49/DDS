@@ -28,11 +28,13 @@ public class HatchTargetRecognizer {
     private static final double RECTANGLE_PAIR_MAX_X_DIFFERENCE = 200;
     private static final double RECTANGLE_PAIR_MAX_Y_DIFFERENCE = 10;
 
+    private static final boolean VERBOSE = false;
+
     public List<HatchTarget> find(Mat image, BiConsumer<RotatedRect,Integer> processConsumer) {
         ArrayList<RotatedRect> possibeTargetMatches = new ArrayList<>();
         for (int i = 0;i < HSL.length;i++) {
             List<RotatedRect> rectangles = process(image, HSL[i][0], HSL[i][1], HSL[i][2]);
-            System.out.println(String.format("Found %s possible target matches", rectangles.size()));
+            log("Found %s possible target matches", rectangles.size());
             for (RotatedRect rectangle : rectangles) {
                 processConsumer.accept(rectangle, i);
             }
@@ -42,7 +44,7 @@ public class HatchTargetRecognizer {
         List<HatchTarget> hatchTargets = findHatchTargets(possibeTargetMatches);
         System.out.println(String.format("Found %s possible hatch matches", hatchTargets.size()));
         hatchTargets = filterSameHatchTargets(hatchTargets);
-        System.out.println(String.format("Found %s hatch matches after removing duplicates", hatchTargets.size()));
+        log("Found %s hatch matches after removing duplicates", hatchTargets.size());
 
         return hatchTargets;
     }
@@ -52,7 +54,7 @@ public class HatchTargetRecognizer {
         List<MatOfPoint> contours = executePipeline(image, minHue, minSaturation, minLuminance);
         List<RotatedRect> rotatedRects = processPipelineOutputs(contours, MIN_AREA, MAX_AREA, TARGET_RATIO,
                 TARGET_RATIO_OFFSET);
-        System.out.println(String.format("Pipeline ran in %s milliseconds", System.currentTimeMillis() - startTime));
+        log("Pipeline ran in %s milliseconds", System.currentTimeMillis() - startTime);
         return rotatedRects;
     }
 
@@ -69,7 +71,7 @@ public class HatchTargetRecognizer {
 
     private List<RotatedRect> processPipelineOutputs(List<MatOfPoint> contours, double minArea, double maxArea,
                                                      double targetRatio, double targetRatioOffset) {
-        System.out.println(String.format("Found %s contours", contours.size()));
+        log("Found %s contours", contours.size());
 
         ArrayList<RotatedRect> filtered = new ArrayList<>();
         for(MatOfPoint contour : contours) {
@@ -163,5 +165,11 @@ public class HatchTargetRecognizer {
         double midpoint2 = ht2.getMidPoint();
 
         return Math.abs(midpoint1 - midpoint2) < 10;
+    }
+
+    private void log(String message, Object... args) {
+        if (VERBOSE) {
+            System.out.println(String.format(message, args));
+        }
     }
 }
