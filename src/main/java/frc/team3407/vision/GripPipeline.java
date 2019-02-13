@@ -16,9 +16,9 @@ import org.opencv.imgproc.*;
 public class GripPipeline {
 
 	//Inputs
-	private double[] hslThresholdHue = {49.08633093525179, 180.0};
-	private double[] hslThresholdSaturation = {57.43345323741006, 255.0};
-	private double[] hslThresholdLuminance = {126.62230215827338, 255.0};
+	private double[] hslThresholdHue = {0.0, 180.0};
+	private double[] hslThresholdSaturation = {0.0, 255.0};
+	private double[] hslThresholdLuminance = {0.0, 255.0};
 
 	//Outputs
 	private Mat hslThresholdOutput = new Mat();

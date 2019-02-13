@@ -1,6 +1,7 @@
 package frc.team3407.vision;
 
 import org.opencv.core.RotatedRect;
+import org.opencv.core.Size;
 
 public class HatchTarget {
     private RotatedRect left;
@@ -28,8 +29,22 @@ public class HatchTarget {
         return (left.center.x + right.center.x) / 2;
     }
 
+    public double getArea() { return left.size.area() + right.size.area(); }
+
+    public double getLeftLongSide() {
+        return getLongSide(left.size);
+    }
+
+    public double getRightLongSide() {
+        return getLongSide(right.size);
+    }
+
     public double getOffset(double range) {
         double midpoint = range / 2;
         return getMidPoint() - midpoint;
+    }
+
+    public static double getLongSide(Size size) {
+        return Math.max(size.height, size.width);
     }
 }

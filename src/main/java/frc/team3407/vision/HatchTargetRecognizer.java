@@ -16,17 +16,19 @@ public class HatchTargetRecognizer {
 
     private static final double[][] HSL = {
             {49.0, 57.0, 126.0},
-            {20.0, 23.0, 90.0},
+            {20.0, 23.0,  90.0},
+            {66.0,  0.0,  90.0},
     };
 
     private static final double MIN_AREA = 1000;
-    private static final double MAX_AREA = 4000;
+    private static final double MAX_AREA = 7000;
     private static final double TARGET_RATIO = 5.0;
     private static final double TARGET_RATIO_OFFSET = 2.5;
 
     private static final double RECTANGLE_PAIR_MIN_X_DIFFERENCE = 50;
     private static final double RECTANGLE_PAIR_MAX_X_DIFFERENCE = 200;
     private static final double RECTANGLE_PAIR_MAX_Y_DIFFERENCE = 10;
+    private static final double RECTANGLE_PAIR_MAX_SIDE_DIFFERENCE = 15;
 
     private static final boolean VERBOSE = false;
 
@@ -94,15 +96,12 @@ public class HatchTargetRecognizer {
     }
 
     private boolean inRatioRange(double ratio, double target, double offset) {
-        if (ratio >= 1) {
-            double lower = target - offset;
-            double upper = target + offset;
-            return (ratio > lower) && (ratio < upper);
-        } else {
-            double lower = 1.0 / (target + offset);
-            double upper = 1.0 / (target - offset);
-            return (ratio > lower) && (ratio < upper);
+        if (ratio < 1) {
+            ratio = 1 / ratio;
         }
+        double lower = target - offset;
+        double upper = target + offset;
+        return (ratio > lower) && (ratio < upper);
     }
 
     private List<HatchTarget> findHatchTargets(List<RotatedRect> targets) {
@@ -131,9 +130,12 @@ public class HatchTargetRecognizer {
 
         //System.out.println(String.format("XDiff=%s YDiff=%s", centerXDifference, centerYDifference));
 
-        return (centerYDifference < RECTANGLE_PAIR_MAX_Y_DIFFERENCE) &&
-                (centerXDifference > RECTANGLE_PAIR_MIN_X_DIFFERENCE) &&
+        boolean isYPlaneInRange = (centerYDifference < RECTANGLE_PAIR_MAX_Y_DIFFERENCE);
+        boolean isXPlaneInRange = (centerXDifference > RECTANGLE_PAIR_MIN_X_DIFFERENCE) &&
                 (centerXDifference < RECTANGLE_PAIR_MAX_X_DIFFERENCE);
+        boolean isSimilarSizes =
+                Math.abs(HatchTarget.getLongSide(rr1.size) - HatchTarget.getLongSide(rr2.size)) < RECTANGLE_PAIR_MAX_SIDE_DIFFERENCE;
+        return isYPlaneInRange && isXPlaneInRange && isSimilarSizes;
     }
 
     private List<HatchTarget> filterSameHatchTargets(List<HatchTarget> targets) {
