@@ -51,8 +51,10 @@ public class Robot extends TimedRobot
         SmartDashboard.putData("Auto mode", chooser);
         VideoSource videoSource0 = CameraServer.getInstance().startAutomaticCapture("test0", 0);
         CameraServer.getInstance().startAutomaticCapture("test1", 1);
-        //testCam.setResolution(1280, 720);
+        videoSource0.setResolution(640, 360);
         //testCam.setFPS(28);
+
+        //CvSource outputStream = CameraServer.getInstance().putVideo("Targeting", 640, 480);
 
         HatchTargetPipeline.startVisionThread(videoSource0);
     }

@@ -19,6 +19,11 @@ public class HatchTargetPipeline implements VisionPipeline {
     private int hits = 0;
     private long count = 0;
     private long duration = 0;
+    private int staleCount = 0;
+    private long lastSnapshotTime = 0;
+
+    private static final int MAX_STALE_COUNT = 5;
+    private static final long SNAPSHOT_INTERVAL_MILLISECONDS = 250;
 
     public static void startVisionThread(VideoSource videoSource) {
         System.out.println("Starting vision thread");
@@ -32,9 +37,12 @@ public class HatchTargetPipeline implements VisionPipeline {
     @Override
     public void process(Mat image) {
         long start = System.currentTimeMillis();
+        if ((start - lastSnapshotTime) < SNAPSHOT_INTERVAL_MILLISECONDS) {
+            return;
+        }
+
         List<HatchTarget> hatchTargets = targetRecognizer.find(image, (rr,idx) -> {});
 
-        double targetOffset = -9999.1111;
         int hitCount = (hatchTargets == null) ? 0 : hatchTargets.size();
         int hit = 0;
         HatchTarget hatchTarget = null;
@@ -43,8 +51,9 @@ public class HatchTargetPipeline implements VisionPipeline {
         } else if (hitCount > 1) {
             hatchTarget = hatchTargets.stream().min(new HatchTargetComparator()).get();
         }
+
+        double targetOffset = width;
         if (hatchTarget != null) {
-            // Get the closest one
             targetOffset = hatchTarget.getOffset(width);
             hit = 1;
         }
@@ -52,15 +61,24 @@ public class HatchTargetPipeline implements VisionPipeline {
         System.out.println("Processing image: hits=" + hitCount);
         long end = System.currentTimeMillis();
         synchronized (this) {
-            offset = targetOffset;
             count++;
             duration += (end - start);
             hits += hit;
+            if (hit == 0) {
+                staleCount++;
+                if (staleCount == MAX_STALE_COUNT) {
+                    offset = width;
+                    staleCount = 0;
+                }
+            } else {
+                staleCount = 0;
+                offset = targetOffset;
+            }
         }
     }
 
     public synchronized void setTargetData() {
-        networkTableTargetData.update(offset, hits, count, duration);
+        networkTableTargetData.update(offset, staleCount, hits, count, duration);
     }
 
     private class HatchTargetComparator implements Comparator<HatchTarget> {

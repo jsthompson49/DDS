@@ -11,11 +11,13 @@ public class NetworkTableTargetData {
     private static final String HITS_NAME = "hits";
     private static final String COUNT_NAME = "count";
     private static final String AVERAGE_TIME_NAME = "timing";
+    private static final String STALE_NAME = "stale";
 
     private NetworkTableEntry offsetEntry;
     private NetworkTableEntry hitsEntry;
     private NetworkTableEntry countEntry;
     private NetworkTableEntry timingEntry;
+    private NetworkTableEntry staleEntry;
 
     public NetworkTableTargetData() {
         NetworkTableInstance root = NetworkTableInstance.getDefault();
@@ -24,14 +26,16 @@ public class NetworkTableTargetData {
         hitsEntry = table.getEntry(HITS_NAME);
         countEntry = table.getEntry(COUNT_NAME);
         timingEntry = table.getEntry(AVERAGE_TIME_NAME);
+        staleEntry = table.getEntry(STALE_NAME);
     }
 
-    public void update(double offset, int hits, long count, long duration) {
+    public void update(double offset, int staleCount, int hits, long count, long duration) {
         offsetEntry.setDouble(offset);
         hitsEntry.setNumber(hits);
         countEntry.setNumber(count);
         if (count > 0) {
             timingEntry.setNumber(duration / count);
         }
+        staleEntry.setNumber(staleCount);
     }
 }

@@ -20,10 +20,13 @@ public class HatchTargetRecognizer {
             {66.0,  0.0,  90.0},
     };
 
-    private static final double MIN_AREA = 1000;
-    private static final double MAX_AREA = 7000;
+    private static final double NORMALIZED_WIDTH = 1920;
+    private static final double MIN_LONG_SIDE = 100;
+    private static final double MAX_LONG_SIDE = 400;
     private static final double TARGET_RATIO = 5.0;
     private static final double TARGET_RATIO_OFFSET = 2.5;
+    private static final double MIN_ANGLE = 10;
+    private static final double MAX_ANGLE = 80;
 
     private static final double RECTANGLE_PAIR_MIN_X_DIFFERENCE = 50;
     private static final double RECTANGLE_PAIR_MAX_X_DIFFERENCE = 200;
@@ -54,7 +57,10 @@ public class HatchTargetRecognizer {
     private List<RotatedRect> process(Mat image, double minHue, double minSaturation, double minLuminance) {
         long startTime = System.currentTimeMillis();
         List<MatOfPoint> contours = executePipeline(image, minHue, minSaturation, minLuminance);
-        List<RotatedRect> rotatedRects = processPipelineOutputs(contours, MIN_AREA, MAX_AREA, TARGET_RATIO,
+        double imageNormalizationFactor = image.width() / NORMALIZED_WIDTH;
+        List<RotatedRect> rotatedRects = processPipelineOutputs(contours,
+                MIN_LONG_SIDE * imageNormalizationFactor,
+                MAX_LONG_SIDE * imageNormalizationFactor, TARGET_RATIO,
                 TARGET_RATIO_OFFSET);
         log("Pipeline ran in %s milliseconds", System.currentTimeMillis() - startTime);
         return rotatedRects;
@@ -71,7 +77,7 @@ public class HatchTargetRecognizer {
         return gripPipeline.findContoursOutput();
     }
 
-    private List<RotatedRect> processPipelineOutputs(List<MatOfPoint> contours, double minArea, double maxArea,
+    private List<RotatedRect> processPipelineOutputs(List<MatOfPoint> contours, double minLongSide, double maxLongSide,
                                                      double targetRatio, double targetRatioOffset) {
         log("Found %s contours", contours.size());
 
@@ -80,12 +86,12 @@ public class HatchTargetRecognizer {
             MatOfPoint2f matOfPoint2f = new MatOfPoint2f();
             contour.convertTo(matOfPoint2f, CvType.CV_32FC2);
             RotatedRect rr = Imgproc.minAreaRect(matOfPoint2f);
-            double area = rr.size.area();
+            double longSide = HatchTarget.getLongSide(rr.size);
             double ratio = rr.size.height / rr.size.width;
 
-            boolean inAreaRange = (area > minArea) && (area < maxArea);
+            boolean inLongSideRange = (longSide > minLongSide) && (longSide < maxLongSide);
             boolean inRatioRange = inRatioRange(ratio, targetRatio, targetRatioOffset);
-            if (inAreaRange && inRatioRange) {
+            if (inLongSideRange && inRatioRange) {
                 //System.out.println(String.format("Center=%s Area=%s Angle=%s Ratio=%s",
                 //        rr.center, area, rr.angle, ratio));
                 filtered.add(rr);
@@ -135,7 +141,13 @@ public class HatchTargetRecognizer {
                 (centerXDifference < RECTANGLE_PAIR_MAX_X_DIFFERENCE);
         boolean isSimilarSizes =
                 Math.abs(HatchTarget.getLongSide(rr1.size) - HatchTarget.getLongSide(rr2.size)) < RECTANGLE_PAIR_MAX_SIDE_DIFFERENCE;
-        return isYPlaneInRange && isXPlaneInRange && isSimilarSizes;
+        boolean isValidAngles = isValidAngle(rr1) && isValidAngle(rr2);
+        return isYPlaneInRange && isXPlaneInRange && isSimilarSizes && isValidAngles;
+    }
+
+    private boolean isValidAngle(RotatedRect rotatedRect) {
+        double absAngle = Math.abs(rotatedRect.angle);
+        return (absAngle > MIN_ANGLE) && (absAngle < MAX_ANGLE);
     }
 
     private List<HatchTarget> filterSameHatchTargets(List<HatchTarget> targets) {
